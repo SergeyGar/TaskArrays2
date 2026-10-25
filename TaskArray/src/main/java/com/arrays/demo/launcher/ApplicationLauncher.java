@@ -1,5 +1,8 @@
 package com.arrays.demo.launcher;
 
+import com.arrays.demo.entity.NumberArray;
+import com.arrays.demo.factory.NumberArrayFactory;
+import com.arrays.demo.warehouse.Warehouse;
 import com.arrays.demo.entity.IntegerArrayEntity;
 import com.arrays.demo.service.CalculationService;
 import com.arrays.demo.service.impl.CalculationServiceImpl;
@@ -30,10 +33,14 @@ public final class ApplicationLauncher {
   private final LineValidator validator = new IntegerLineValidator();
   private final LineParser parser = new IntegerLineParser(validator);
   private final ArrayFactory factory = new IntegerArrayFactory();
+  private final NumberArrayFactory registeredFactory = new NumberArrayFactory();
   private final SortService bubbleSort = new BubbleSortServiceImpl();
   private final SortService insertionSort = new InsertionSortServiceImpl();
 
   public void run(Path path) {
+    if (path == null) {
+      throw new IllegalArgumentException("Path must not be null");
+    }
     LOGGER.info("Reading array definitions from {}", path);
     List<String> lines = reader.read(path);
     int processed = 0;
@@ -45,6 +52,12 @@ public final class ApplicationLauncher {
       if (validator.isValid(line)) {
         try {
           int[] values = parser.parse(line);
+          NumberArray registered = registeredFactory.create(
+              java.util.UUID.randomUUID().toString(), "Line " + (index + 1), values);
+          Warehouse.Statistics statistics = Warehouse.getInstance()
+              .getStats(registered.getId()).orElseThrow();
+          LOGGER.info("Registered array {} ({}): sum={}, average={}",
+              registered.getId(), registered.getName(), statistics.getSum(), statistics.getAvg());
           IntegerArrayEntity array = factory.create(values);
           report(array);
           processed++;
